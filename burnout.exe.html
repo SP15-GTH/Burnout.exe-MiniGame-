@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAKEHOLDER HELL</title>
+<style>
+  /* =====================================================
+     STAKEHOLDER HELL - CSS
+     Dark corporate nightmare / retro arcade aesthetic
+  ===================================================== */
+
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  :root {
+    --neon-green: #00ff41;
+    --neon-amber: #ffb700;
+    --neon-red: #ff2020;
+    --neon-cyan: #00d4ff;
+    --bg-dark: #050a05;
+    --bg-panel: #0a140a;
+    --stress-color: #ff2020;
+    --coffee-color: #c8860a;
+    --text-dim: #3a5a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-dark);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--neon-green);
+    overflow: hidden;
+    user-select: none;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Scanline overlay for CRT effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  #game-wrapper {
+    position: relative;
+    width: 700px;
+    height: 580px;
+  }
+
+  /* ---- CANVAS ---- */
+  #gameCanvas {
+    display: block;
+    border: 2px solid var(--neon-green);
+    box-shadow:
+      0 0 20px rgba(0,255,65,0.3),
+      0 0 60px rgba(0,255,65,0.1),
+      inset 0 0 40px rgba(0,0,0,0.8);
+    background: var(--bg-dark);
+  }
+
+  /* ---- HUD OVERLAY ---- */
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-block {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .hud-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .hud-value {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--neon-green);
+    text-shadow: 0 0 8px var(--neon-green);
+  }
+
+  /* Stress meter bar */
+  #stress-bar-wrap {
+    width: 120px;
+  }
+
+  #stress-bar-bg {
+    width: 120px;
+    height: 12px;
+    border: 1px solid var(--neon-red);
+    background: #1a0000;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #stress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6600, #ff2020);
+    box-shadow: 0 0 8px #ff2020;
+    transition: width 0.2s;
+    width: 0%;
+  }
+
+  /* Power-up timer */
+  #powerup-display {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: var(--neon-amber);
+    text-shadow: 0 0 10px var(--neon-amber);
+    pointer-events: none;
+    text-align: center;
+    z-index: 10;
+  }
+
+  /* Mute button */
+  #mute-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    z-index: 20;
+    transition: all 0.2s;
+  }
+  #mute-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+
+  /* ---- SCREENS (start, game-over, level-up) ---- */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 10, 5, 0.93);
+    z-index: 100;
+    gap: 14px;
+  }
+
+  .screen.hidden { display: none; }
+
+  .screen-title {
+    font-family: 'VT323', monospace;
+    font-size: 62px;
+    color: var(--neon-green);
+    text-shadow: 0 0 20px var(--neon-green), 0 0 40px rgba(0,255,65,0.4);
+    letter-spacing: 4px;
+    animation: flicker 3s infinite;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .screen-subtitle {
+    font-size: 13px;
+    color: var(--neon-amber);
+    text-shadow: 0 0 8px var(--neon-amber);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .screen-body {
+    font-size: 12px;
+    color: #5a8a5a;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 440px;
+  }
+
+  .hazard-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    max-width: 480px;
+  }
+
+  .hazard-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #3a5a3a;
+    color: #5a8a5a;
+    border-radius: 2px;
+  }
+
+  .btn {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    padding: 8px 40px;
+    border: 2px solid var(--neon-green);
+    background: transparent;
+    color: var(--neon-green);
+    cursor: pointer;
+    text-shadow: 0 0 10px var(--neon-green);
+    box-shadow: 0 0 12px rgba(0,255,65,0.2);
+    transition: all 0.15s;
+    letter-spacing: 2px;
+  }
+
+  .btn:hover {
+    background: rgba(0,255,65,0.12);
+    box-shadow: 0 0 24px rgba(0,255,65,0.4);
+    transform: scale(1.03);
+  }
+
+  .btn-red {
+    border-color: var(--neon-red);
+    color: var(--neon-red);
+    text-shadow: 0 0 10px var(--neon-red);
+    box-shadow: 0 0 12px rgba(255,32,32,0.2);
+  }
+  .btn-red:hover {
+    background: rgba(255,32,32,0.1);
+    box-shadow: 0 0 24px rgba(255,32,32,0.4);
+  }
+
+  .gameover-msg {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: var(--neon-red);
+    text-shadow: 0 0 10px var(--neon-red);
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.4;
+  }
+
+  .final-score {
+    font-family: 'VT323', monospace;
+    font-size: 32px;
+    color: var(--neon-amber);
+    text-shadow: 0 0 10px var(--neon-amber);
+  }
+
+  /* controls table on start screen */
+  .controls {
+    font-size: 11px;
+    color: #4a7a4a;
+    border-collapse: collapse;
+    text-align: left;
+  }
+  .controls td { padding: 2px 12px; }
+  .controls td:first-child { color: var(--neon-amber); }
+
+  /* level banner */
+  #level-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'VT323', monospace;
+    font-size: 48px;
+    color: var(--neon-amber);
+    text-shadow: 0 0 20px var(--neon-amber);
+    pointer-events: none;
+    z-index: 50;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+
+  @keyframes flicker {
+    0%,96%,100% { opacity: 1; }
+    97% { opacity: 0.7; }
+    98% { opacity: 1; }
+    99% { opacity: 0.5; }
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    20% { transform: translate(-4px,2px); }
+    40% { transform: translate(4px,-2px); }
+    60% { transform: translate(-3px,3px); }
+    80% { transform: translate(3px,-1px); }
+  }
+
+  .screen-divider {
+    width: 300px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--text-dim), transparent);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+
+  <!-- Main canvas -->
+  <canvas id="gameCanvas" width="700" height="580"></canvas>
+
+  <!-- HUD (always visible during game) -->
+  <div id="hud">
+    <div class="hud-block">
+      <span class="hud-label">Score</span>
+      <span class="hud-value" id="hud-score">0</span>
+    </div>
+    <div class="hud-block" style="align-items:center">
+      <span class="hud-label">Stress</span>
+      <div id="stress-bar-wrap">
+        <div id="stress-bar-bg"><div id="stress-bar-fill"></div></div>
+      </div>
+      <span class="hud-value" id="hud-stress" style="font-size:14px;color:var(--neon-red)">0/10</span>
+    </div>
+    <div class="hud-block" style="align-items:flex-end">
+      <span class="hud-label">Level</span>
+      <span class="hud-value" id="hud-level">1</span>
+    </div>
+  </div>
+
+  <!-- Power-up timer display -->
+  <div id="powerup-display"></div>
+
+  <!-- Level banner flash -->
+  <div id="level-banner"></div>
+
+  <!-- Mute button -->
+  <button id="mute-btn">🔊 MUTE</button>
+
+  <!-- START SCREEN -->
+  <div class="screen" id="start-screen">
+    <div class="screen-title">☠ STAKEHOLDER<br>HELL ☠</div>
+    <div class="screen-subtitle">— A Corporate Survival Simulator —</div>
+    <div class="screen-divider"></div>
+    <div class="screen-body">
+      You are a <strong style="color:var(--neon-green)">tired analyst</strong>.<br>
+      Survive the avalanche of corporate chaos.<br>
+      Don't burn out. Collect coffee. Question your life choices.
+    </div>
+    <div class="hazard-list">
+      <div class="hazard-tag">📧 Emails</div>
+      <div class="hazard-tag">💬 Slack Pings</div>
+      <div class="hazard-tag">❓ "Can you quickly…"</div>
+      <div class="hazard-tag">📊 Board Deck Comments</div>
+      <div class="hazard-tag">🔴 "Model not tying"</div>
+      <div class="hazard-tag">⏰ "Need this EOD"</div>
+      <div class="hazard-tag">🔄 "Circling back"</div>
+    </div>
+    <div class="screen-divider"></div>
+    <table class="controls">
+      <tr><td>← / A  →/ D</td><td>Move</td></tr>
+      <tr><td>☕ Coffee</td><td>5s invincibility</td></tr>
+      <tr><td>🎧 Headphones</td><td>Slow hazards 5s</td></tr>
+      <tr><td>🏖 Annual Leave</td><td>Clear all hazards</td></tr>
+    </table>
+    <button class="btn" id="start-btn">▶ CLOCK IN</button>
+    <div style="font-size:10px;color:#3a5a3a">10 stress = burnout | 5 levels of hell await</div>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div class="screen hidden" id="gameover-screen">
+    <div class="screen-title" style="font-size:52px;color:var(--neon-red)">BURNED OUT</div>
+    <div class="gameover-msg" id="gameover-msg"></div>
+    <div class="final-score">SCORE: <span id="final-score-val">0</span></div>
+    <div style="font-size:12px;color:#4a7a4a">LEVEL REACHED: <span id="final-level-val" style="color:var(--neon-amber)">1</span></div>
+    <button class="btn btn-red" id="restart-btn">↩ SUBMIT LEAVE REQUEST</button>
+    <div style="font-size:10px;color:#3a5a3a">(restart)</div>
+  </div>
+
+  <!-- WIN SCREEN -->
+  <div class="screen hidden" id="win-screen">
+    <div class="screen-title" style="font-size:44px">YOU SURVIVED<br>PARTNER COMMENTS</div>
+    <div style="font-family:'VT323',monospace;font-size:22px;color:var(--neon-amber)">
+      "Great work. Can you just tweak slide 3 really quickly?"
+    </div>
+    <div class="final-score">FINAL SCORE: <span id="win-score-val">0</span></div>
+    <button class="btn" id="win-restart-btn">▶ PLAY AGAIN (WHY?)</button>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================
+   STAKEHOLDER HELL — GAME ENGINE
+   Vanilla JS canvas game, no external deps
+===================================================== */
+
+// ---- AUDIO ENGINE ----
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let muted = false;
+
+document.getElementById('mute-btn').addEventListener('click', () => {
+  muted = !muted;
+  document.getElementById('mute-btn').textContent = muted ? '🔇 UNMUTE' : '🔊 MUTE';
+});
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, vol = 0.3, ramp = true) {
+  if (muted) return;
+  try {
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    if (ramp) gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function sfxHit() {
+  // Harsh buzz
+  playTone(80, 'sawtooth', 0.3, 0.4);
+  setTimeout(() => playTone(60, 'square', 0.15, 0.3), 80);
+}
+
+function sfxPowerup() {
+  // Happy ascending beeps
+  [440, 550, 660, 880].forEach((f, i) => {
+    setTimeout(() => playTone(f, 'sine', 0.15, 0.25), i * 70);
+  });
+}
+
+function sfxLevelUp() {
+  [330, 440, 550, 660, 880, 1100].forEach((f, i) => {
+    setTimeout(() => playTone(f, 'triangle', 0.2, 0.3), i * 60);
+  });
+}
+
+function sfxWin() {
+  const melody = [523, 659, 784, 1047, 784, 1047, 1319];
+  melody.forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.35), i * 120));
+}
+
+function sfxBoss() {
+  playTone(110, 'sawtooth', 0.5, 0.5);
+  setTimeout(() => playTone(90, 'square', 0.4, 0.4), 200);
+}
+
+// ---- CANVAS SETUP ----
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// ---- GAME STATE ----
+let state = 'start'; // 'start' | 'playing' | 'gameover' | 'win'
+let score = 0;
+let stress = 0;
+let level = 1;
+let frameCount = 0;
+let lastTime = 0;
+let gameTime = 0;       // seconds elapsed in current run
+let levelTime = 0;      // seconds in current level
+
+// Power-up state
+let invincible = false;
+let invTimer = 0;
+let slowMode = false;
+let slowTimer = 0;
+
+// Screen shake
+let shakeFrames = 0;
+let shakeIntensity = 0;
+
+// Boss state
+let bossActive = false;
+let bossHP = 0;
+let bossTimer = 0;
+let boss = null;
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key] = true; });
+document.addEventListener('keyup',   e => { keys[e.key] = false; });
+
+// ---- LEVELS ----
+const LEVELS = [
+  { name: 'LVL 1: MONDAY MORNING',       spawnRate: 90,  speed: 1.8, bossMode: false },
+  { name: 'LVL 2: FORECAST UPDATE',      spawnRate: 70,  speed: 2.3, bossMode: false },
+  { name: 'LVL 3: BOARD WEEK',           spawnRate: 50,  speed: 2.9, bossMode: false },
+  { name: 'LVL 4: CFO REVIEW',           spawnRate: 45,  speed: 3.2, bossMode: true  },
+  { name: 'LVL 5: PARTNER SENDS NOTES',  spawnRate: 30,  speed: 3.8, bossMode: false },
+];
+
+const LEVEL_DURATION = 30; // seconds per level
+
+// ---- HAZARD TYPES ----
+const HAZARD_TYPES = [
+  { label: '📧 Email',              color: '#00aaff', w: 90,  h: 28 },
+  { label: '💬 Slack Ping',         color: '#9b59b6', w: 96,  h: 28 },
+  { label: '❓ Can you quickly…',   color: '#e67e22', w: 130, h: 28 },
+  { label: '📊 Deck Comment',       color: '#e74c3c', w: 110, h: 28 },
+  { label: '🔴 Model not tying',    color: '#ff2020', w: 120, h: 28 },
+  { label: '⏰ Need this EOD',       color: '#ffb700', w: 114, h: 28 },
+  { label: '🔄 Circling back',      color: '#27ae60', w: 110, h: 28 },
+  { label: '📞 Hop on a call?',     color: '#16a085', w: 116, h: 28 },
+  { label: '😤 This is urgent!!!',  color: '#c0392b', w: 126, h: 28 },
+  { label: '📝 Quick question',     color: '#8e44ad', w: 112, h: 28 },
+];
+
+// Power-up types
+const POWERUP_TYPES = [
+  { label: '☕ Coffee',             color: '#c8860a', type: 'coffee'   },
+  { label: '🎧 Headphones',         color: '#00d4ff', type: 'headphones' },
+  { label: '🏖 Annual Leave',       color: '#2ecc71', type: 'leave'    },
+];
+
+// Burnout messages
+const BURNOUT_MSGS = [
+  '"You have 47 unread emails. Have a great weekend!"',
+  '"The model still isn\'t tying. Also, can you join a 9pm call?"',
+  '"We need to circle back on circling back. And also the deck."',
+  '"The CFO has some questions. All 200 of them. By 8am."',
+  '"Your calendar is back-to-back until 2027. Godspeed."',
+  '"Leadership just added 14 more slides. And it\'s Thursday night."',
+];
+
+// ---- PLAYER ----
+const player = {
+  x: W / 2,
+  y: H - 60,
+  w: 36,
+  h: 44,
+  speed: 5.5,
+  trail: [],
+
+  update(dt) {
+    const spd = this.speed * (slowMode ? 1.1 : 1);
+    if (keys['ArrowLeft']  || keys['a'] || keys['A']) this.x -= spd;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) this.x += spd;
+    this.x = Math.max(this.w/2, Math.min(W - this.w/2, this.x));
+
+    // Trail for invincibility
+    if (invincible) {
+      this.trail.push({ x: this.x, y: this.y, alpha: 0.5 });
+      if (this.trail.length > 8) this.trail.shift();
+    } else {
+      this.trail = [];
+    }
+  },
+
+  draw() {
+    // Draw ghost trail
+    this.trail.forEach((t, i) => {
+      ctx.save();
+      ctx.globalAlpha = t.alpha * (i / this.trail.length) * 0.4;
+      ctx.fillStyle = '#00ffff';
+      ctx.fillRect(t.x - this.w/2, t.y - this.h/2, this.w, this.h);
+      ctx.restore();
+    });
+
+    const px = this.x - this.w/2;
+    const py = this.y - this.h/2;
+
+    // Invincibility glow
+    if (invincible) {
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#00ffff';
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px - 4, py - 4, this.w + 8, this.h + 8);
+      ctx.restore();
+    }
+
+    // Body (pixel-art desk worker)
+    // Chair
+    ctx.fillStyle = '#1a2a1a';
+    ctx.fillRect(px - 4, py + 32, this.w + 8, 8);
+    ctx.fillRect(px + this.w/2 - 3, py + 36, 6, 8);
+
+    // Torso
+    ctx.fillStyle = '#2a4a2a';
+    ctx.fillRect(px + 6, py + 18, 24, 18);
+
+    // Tie
+    ctx.fillStyle = '#ffb700';
+    ctx.fillRect(px + 15, py + 18, 6, 14);
+
+    // Head
+    ctx.fillStyle = '#c8a882';
+    ctx.fillRect(px + 8, py + 4, 20, 16);
+
+    // Eyes (tired)
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(px + 11, py + 8, 4, 3);
+    ctx.fillRect(px + 21, py + 8, 4, 3);
+
+    // Dark circles under eyes
+    ctx.fillStyle = '#8B4513';
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(px + 11, py + 11, 4, 2);
+    ctx.fillRect(px + 21, py + 11, 4, 2);
+    ctx.globalAlpha = 1;
+
+    // Mouth (grimace)
+    ctx.fillStyle = '#7a3a1a';
+    ctx.fillRect(px + 12, py + 16, 12, 2);
+
+    // Hair (disheveled)
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(px + 8, py + 2, 20, 6);
+    ctx.fillRect(px + 14, py, 4, 4); // cowlick
+
+    // Arms (at keyboard)
+    ctx.fillStyle = '#2a4a2a';
+    ctx.fillRect(px, py + 22, 8, 12);
+    ctx.fillRect(px + 28, py + 22, 8, 12);
+
+    // Laptop
+    ctx.fillStyle = '#1a3a1a';
+    ctx.fillRect(px - 2, py + 34, this.w + 4, 4);
+    ctx.fillStyle = '#00ff41';
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(px - 1, py + 34, this.w + 2, 3);
+    ctx.globalAlpha = 1;
+  }
+};
+
+// ---- FALLING OBJECTS ----
+let hazards = [];
+let powerups = [];
+
+function spawnHazard() {
+  const levelData = LEVELS[level - 1];
+  const type = HAZARD_TYPES[Math.floor(Math.random() * HAZARD_TYPES.length)];
+  const speedMult = slowMode ? 0.45 : 1;
+  hazards.push({
+    x: Math.random() * (W - type.w - 10) + type.w / 2,
+    y: -20,
+    w: type.w,
+    h: type.h,
+    speed: (levelData.speed + Math.random() * 0.8) * speedMult,
+    baseSpeed: levelData.speed + Math.random() * 0.8,
+    label: type.label,
+    color: type.color,
+    rotation: (Math.random() - 0.5) * 0.15,
+    wobble: Math.random() * Math.PI * 2,
+  });
+}
+
+function spawnPowerup() {
+  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  powerups.push({
+    x: Math.random() * (W - 80) + 40,
+    y: -20,
+    w: 80,
+    h: 26,
+    speed: 1.4,
+    label: type.label,
+    color: type.color,
+    type: type.type,
+    pulse: 0,
+  });
+}
+
+// Boss variance questions
+const BOSS_QUESTIONS = [
+  '⚡ WHY IS EBITDA OFF?',
+  '⚡ EXPLAIN THE VARIANCE',
+  '⚡ MODEL NOT TYING!',
+  '⚡ REFORECAST NOW',
+  '⚡ ADD MORE SCENARIOS',
+  '⚡ WRONG ASSUMPTIONS',
+  '⚡ BRIDGE IT OUT',
+];
+
+let bossProjectiles = [];
+
+function spawnBossProjectile() {
+  if (!boss) return;
+  const label = BOSS_QUESTIONS[Math.floor(Math.random() * BOSS_QUESTIONS.length)];
+  bossProjectiles.push({
+    x: boss.x + boss.w/2,
+    y: boss.y + boss.h,
+    w: 160,
+    h: 26,
+    speed: 2.8 + Math.random() * 1.2,
+    vx: (Math.random() - 0.5) * 3,
+    label,
+  });
+}
+
+// ---- COLLISION ----
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function checkCollisions() {
+  const px = player.x - player.w/2;
+  const py = player.y - player.h/2;
+
+  // Hazards
+  for (let i = hazards.length - 1; i >= 0; i--) {
+    const h = hazards[i];
+    const hx = h.x - h.w/2;
+    if (rectsOverlap(px+4, py+4, player.w-8, player.h-8, hx, h.y, h.w, h.h)) {
+      hazards.splice(i, 1);
+      if (!invincible) {
+        stress++;
+        sfxHit();
+        shakeFrames = 18;
+        shakeIntensity = 6;
+        updateHUD();
+        if (stress >= 10) triggerGameOver();
+      }
+    }
+  }
+
+  // Power-ups
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const p = powerups[i];
+    const ppx = p.x - p.w/2;
+    if (rectsOverlap(px, py, player.w, player.h, ppx, p.y, p.w, p.h)) {
+      powerups.splice(i, 1);
+      applyPowerup(p.type);
+      sfxPowerup();
+    }
+  }
+
+  // Boss projectiles
+  for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+    const bp = bossProjectiles[i];
+    const bpx = bp.x - bp.w/2;
+    if (rectsOverlap(px+4, py+4, player.w-8, player.h-8, bpx, bp.y, bp.w, bp.h)) {
+      bossProjectiles.splice(i, 1);
+      if (!invincible) {
+        stress++;
+        sfxHit();
+        shakeFrames = 18;
+        shakeIntensity = 6;
+        updateHUD();
+        if (stress >= 10) triggerGameOver();
+      }
+    }
+  }
+}
+
+function applyPowerup(type) {
+  if (type === 'coffee') {
+    invincible = true;
+    invTimer = 5;
+  } else if (type === 'headphones') {
+    slowMode = true;
+    slowTimer = 5;
+    // Update existing hazard speeds
+    hazards.forEach(h => h.speed = h.baseSpeed * 0.45);
+    bossProjectiles.forEach(bp => bp.speed *= 0.5);
+  } else if (type === 'leave') {
+    hazards = [];
+    bossProjectiles = [];
+  }
+}
+
+// ---- BOSS ----
+function initBoss() {
+  bossActive = true;
+  bossTimer = 30;
+  bossHP = 1;
+  boss = {
+    x: W/2 - 100,
+    y: 10,
+    w: 200,
+    h: 50,
+    vx: 1.5,
+    pulseT: 0,
+  };
+}
+
+function updateBoss(dt) {
+  if (!boss) return;
+  boss.x += boss.vx;
+  if (boss.x < 10 || boss.x + boss.w > W - 10) boss.vx *= -1;
+  boss.pulseT += dt * 3;
+  bossTimer -= dt;
+
+  // Fire variance question every ~1.2s
+  if (frameCount % 72 === 0) spawnBossProjectile();
+
+  // Update boss projectiles
+  for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+    const bp = bossProjectiles[i];
+    bp.y += bp.speed;
+    bp.x += bp.vx;
+    if (bp.y > H + 30 || bp.x < -200 || bp.x > W + 200) bossProjectiles.splice(i, 1);
+  }
+
+  if (bossTimer <= 0) {
+    // Boss defeated
+    bossActive = false;
+    bossProjectiles = [];
+    boss = null;
+    sfxLevelUp();
+  }
+}
+
+function drawBoss() {
+  if (!boss) return;
+
+  // Boss glow
+  ctx.save();
+  const pulse = 0.7 + 0.3 * Math.sin(boss.pulseT);
+  ctx.shadowBlur = 30 * pulse;
+  ctx.shadowColor = '#ff2020';
+
+  // Boss body
+  ctx.fillStyle = '#1a0000';
+  ctx.strokeStyle = '#ff2020';
+  ctx.lineWidth = 2;
+  ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+  ctx.strokeRect(boss.x, boss.y, boss.w, boss.h);
+
+  // Boss label
+  ctx.font = 'bold 13px "Share Tech Mono"';
+  ctx.fillStyle = '#ff2020';
+  ctx.textAlign = 'center';
+  ctx.fillText('👔 CFO REVIEW', boss.x + boss.w/2, boss.y + 18);
+
+  ctx.font = '10px "Share Tech Mono"';
+  ctx.fillStyle = '#ff6060';
+  const secs = Math.max(0, Math.ceil(bossTimer));
+  ctx.fillText(`SURVIVE: ${secs}s`, boss.x + boss.w/2, boss.y + 36);
+
+  ctx.restore();
+
+  // Boss projectiles
+  bossProjectiles.forEach(bp => {
+    const bpx = bp.x - bp.w/2;
+    ctx.save();
+    ctx.fillStyle = '#2a0000';
+    ctx.strokeStyle = '#ff2020';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(bpx, bp.y, bp.w, bp.h);
+    ctx.strokeRect(bpx, bp.y, bp.w, bp.h);
+    ctx.font = '11px "Share Tech Mono"';
+    ctx.fillStyle = '#ff4040';
+    ctx.textAlign = 'center';
+    ctx.fillText(bp.label, bp.x, bp.y + 18);
+    ctx.restore();
+  });
+}
+
+// ---- PARTICLES ----
+let particles = [];
+
+function spawnHitParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5 - 2,
+      life: 1,
+      color,
+      size: 3 + Math.random() * 4,
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life -= dt * 2;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    ctx.restore();
+  });
+}
+
+// ---- BACKGROUND GRID ----
+function drawBackground() {
+  // Dark gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#020802');
+  grad.addColorStop(1, '#050a05');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,255,65,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Floor line
+  ctx.strokeStyle = 'rgba(0,255,65,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, H - 20);
+  ctx.lineTo(W, H - 20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Desk surface
+  ctx.fillStyle = 'rgba(0,255,65,0.05)';
+  ctx.fillRect(0, H - 20, W, 20);
+}
+
+// ---- DRAW HAZARD ----
+function drawHazard(h) {
+  const x = h.x - h.w/2;
+  ctx.save();
+  ctx.translate(h.x, h.y + h.h/2);
+  ctx.rotate(Math.sin(h.wobble + frameCount * 0.03) * h.rotation);
+  ctx.translate(-h.x, -(h.y + h.h/2));
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(x + 3, h.y + 3, h.w, h.h);
+
+  // Body
+  ctx.fillStyle = h.color + '22';
+  ctx.strokeStyle = h.color;
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(x, h.y, h.w, h.h);
+  ctx.strokeRect(x, h.y, h.w, h.h);
+
+  // Glow
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = h.color;
+  ctx.strokeRect(x, h.y, h.w, h.h);
+  ctx.shadowBlur = 0;
+
+  // Label
+  ctx.font = '11px "Share Tech Mono"';
+  ctx.fillStyle = h.color;
+  ctx.textAlign = 'center';
+  ctx.fillText(h.label, h.x, h.y + 18);
+
+  ctx.restore();
+}
+
+// ---- DRAW POWER-UP ----
+function drawPowerup(p) {
+  const px = p.x - p.w/2;
+  p.pulse += 0.1;
+  const glow = 8 + 6 * Math.sin(p.pulse);
+
+  ctx.save();
+  ctx.shadowBlur = glow;
+  ctx.shadowColor = p.color;
+
+  ctx.fillStyle = p.color + '33';
+  ctx.strokeStyle = p.color;
+  ctx.lineWidth = 2;
+  ctx.fillRect(px, p.y, p.w, p.h);
+  ctx.strokeRect(px, p.y, p.w, p.h);
+
+  ctx.font = 'bold 12px "Share Tech Mono"';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(p.label, p.x, p.y + 18);
+
+  ctx.restore();
+}
+
+// ---- HUD UPDATE ----
+function updateHUD() {
+  document.getElementById('hud-score').textContent = score;
+  document.getElementById('hud-stress').textContent = `${stress}/10`;
+  document.getElementById('hud-level').textContent = level;
+
+  // Stress bar
+  const pct = (stress / 10) * 100;
+  document.getElementById('stress-bar-fill').style.width = pct + '%';
+
+  // Power-up display
+  const pdiv = document.getElementById('powerup-display');
+  const msgs = [];
+  if (invincible) msgs.push(`☕ INVINCIBLE ${Math.ceil(invTimer)}s`);
+  if (slowMode)   msgs.push(`🎧 SLOW MODE ${Math.ceil(slowTimer)}s`);
+  pdiv.textContent = msgs.join('  |  ');
+}
+
+// ---- LEVEL UP ----
+function tryLevelUp() {
+  if (level >= LEVELS.length) return;
+  if (levelTime >= LEVEL_DURATION) {
+    level++;
+    levelTime = 0;
+    sfxLevelUp();
+    showLevelBanner(LEVELS[level-1].name);
+
+    if (level === 4 && !bossActive) {
+      setTimeout(() => initBoss(), 500);
+    }
+
+    if (level > LEVELS.length) {
+      triggerWin();
+    }
+  }
+}
+
+function showLevelBanner(name) {
+  const el = document.getElementById('level-banner');
+  el.textContent = name;
+  el.style.opacity = 1;
+  setTimeout(() => { el.style.opacity = 0; }, 2800);
+}
+
+// ---- GAME OVER / WIN ----
+function triggerGameOver() {
+  state = 'gameover';
+  const msg = BURNOUT_MSGS[Math.floor(Math.random() * BURNOUT_MSGS.length)];
+  document.getElementById('gameover-msg').textContent = msg;
+  document.getElementById('final-score-val').textContent = score;
+  document.getElementById('final-level-val').textContent = LEVELS[level-1].name;
+  document.getElementById('gameover-screen').classList.remove('hidden');
+}
+
+function triggerWin() {
+  state = 'win';
+  sfxWin();
+  document.getElementById('win-score-val').textContent = score;
+  document.getElementById('win-screen').classList.remove('hidden');
+}
+
+// ---- RESET GAME ----
+function resetGame() {
+  score = 0; stress = 0; level = 1;
+  frameCount = 0; gameTime = 0; levelTime = 0;
+  hazards = []; powerups = []; particles = [];
+  bossProjectiles = []; bossActive = false; boss = null;
+  invincible = false; invTimer = 0;
+  slowMode = false; slowTimer = 0;
+  shakeFrames = 0;
+  player.x = W / 2;
+  player.trail = [];
+  document.getElementById('gameover-screen').classList.add('hidden');
+  document.getElementById('win-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('level-banner').style.opacity = 0;
+  updateHUD();
+  state = 'playing';
+  showLevelBanner(LEVELS[0].name);
+}
+
+// ---- MAIN GAME LOOP ----
+function gameLoop(timestamp) {
+  requestAnimationFrame(gameLoop);
+  if (state !== 'playing') return;
+
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+  frameCount++;
+  gameTime += dt;
+  levelTime += dt;
+
+  // Score ticks up over time
+  if (frameCount % 30 === 0) {
+    score += level * 2;
+    updateHUD();
+  }
+
+  // Power-up timers
+  if (invincible) {
+    invTimer -= dt;
+    if (invTimer <= 0) { invincible = false; invTimer = 0; }
+  }
+  if (slowMode) {
+    slowTimer -= dt;
+    if (slowTimer <= 0) {
+      slowMode = false; slowTimer = 0;
+      // Restore hazard speeds
+      hazards.forEach(h => h.speed = h.baseSpeed);
+    }
+  }
+
+  // Level progression
+  tryLevelUp();
+  if (level > LEVELS.length) return;
+
+  const levelData = LEVELS[level - 1];
+
+  // Spawn hazards
+  const spawnRate = bossActive
+    ? Math.floor(levelData.spawnRate * 1.5)  // boss: fewer hazards (boss fires instead)
+    : Math.max(25, levelData.spawnRate - Math.floor(levelTime * 0.4));
+
+  if (frameCount % spawnRate === 0) spawnHazard();
+
+  // Spawn power-ups occasionally
+  if (frameCount % 420 === 0) spawnPowerup();
+
+  // Update hazards
+  for (let i = hazards.length - 1; i >= 0; i--) {
+    const h = hazards[i];
+    h.y += h.speed;
+    h.wobble += 0.04;
+    if (h.y > H + 40) hazards.splice(i, 1);
+  }
+
+  // Update power-ups
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const p = powerups[i];
+    p.y += p.speed;
+    if (p.y > H + 40) powerups.splice(i, 1);
+  }
+
+  // Boss mode
+  if (bossActive) updateBoss(dt);
+  else if (level === 4 && !boss && bossTimer === 0) {/* boss not yet initiated */}
+
+  // Player
+  player.update(dt);
+  checkCollisions();
+  updateParticles(dt);
+
+  // ---- DRAW ----
+  ctx.save();
+
+  // Screen shake
+  if (shakeFrames > 0) {
+    const sx = (Math.random() - 0.5) * shakeIntensity;
+    const sy = (Math.random() - 0.5) * shakeIntensity;
+    ctx.translate(sx, sy);
+    shakeFrames--;
+    shakeIntensity *= 0.9;
+  }
+
+  drawBackground();
+  hazards.forEach(h => drawHazard(h));
+  powerups.forEach(p => drawPowerup(p));
+  if (bossActive) drawBoss();
+  player.draw();
+  drawParticles();
+
+  // Stress flash overlay when stressed
+  if (stress >= 7) {
+    const alpha = 0.04 + 0.03 * Math.sin(frameCount * 0.2);
+    ctx.fillStyle = `rgba(255,0,0,${alpha})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Invincibility overlay
+  if (invincible) {
+    const a = 0.05 * Math.abs(Math.sin(frameCount * 0.2));
+    ctx.fillStyle = `rgba(0,255,255,${a})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.restore();
+
+  // Update HUD every frame for timers
+  if (invincible || slowMode) updateHUD();
+}
+
+// ---- BUTTON LISTENERS ----
+document.getElementById('start-btn').addEventListener('click', () => {
+  // Init audio context on user gesture
+  if (!audioCtx) audioCtx = new AudioCtx();
+  resetGame();
+  lastTime = performance.now();
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  resetGame();
+  lastTime = performance.now();
+});
+
+document.getElementById('win-restart-btn').addEventListener('click', () => {
+  resetGame();
+  lastTime = performance.now();
+});
+
+// ---- KICK OFF LOOP ----
+requestAnimationFrame(ts => {
+  lastTime = ts;
+  requestAnimationFrame(gameLoop);
+});
+</script>
+</body>
+</html>
